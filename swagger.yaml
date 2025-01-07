@@ -1,0 +1,284 @@
+openapi: 3.0.0
+info:
+  title: Therapy App API
+  description: API for managing therapy sessions, clients, therapists, and journals.
+  version: 1.0.0
+
+servers:
+  - url: https://api.therapyapp.com/v1
+    description: Production server
+
+paths:
+  /clients/register:
+    post:
+      summary: Register a new client
+      description: Creates a new client account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        201:
+          description: Client created successfully
+        400:
+          description: Invalid input
+        409:
+          description: Email already exists
+
+  /therapists/register:
+    post:
+      summary: Register a new therapist
+      description: Creates a new therapist account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                specialization:
+                  type: string
+                  description: Area of expertise of the therapist
+      responses:
+        201:
+          description: Therapist created successfully
+        400:
+          description: Invalid input
+        409:
+          description: Email already exists
+
+  /clients/{clientId}/journals:
+    post:
+      summary: Add a journal entry
+      description: Adds an emotion entry to the client's journal.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - emotion
+                - intensity
+                - timestamp
+              properties:
+                emotion:
+                  type: string
+                intensity:
+                  type: integer
+                  minimum: 1
+                  maximum: 10
+                timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        201:
+          description: Journal entry added successfully
+        400:
+          description: Invalid input
+        404:
+          description: Client not found
+
+  /clients/{clientId}/therapists:
+    get:
+      summary: Get mapped therapists
+      description: Retrieves a list of therapists mapped to the client.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of therapists retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    therapistId:
+                      type: string
+                    name:
+                      type: string
+                    email:
+                      type: string
+        404:
+          description: Client not found
+
+    post:
+      summary: Map a therapist to the client
+      description: Maps a therapist to the client account for therapy sessions.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - therapistId
+              properties:
+                therapistId:
+                  type: string
+      responses:
+        201:
+          description: Therapist mapped successfully
+        404:
+          description: Client or therapist not found
+        409:
+          description: Therapist already mapped to client
+
+  /therapists/{therapistId}/clients:
+    get:
+      summary: Get mapped clients
+      description: Retrieves a list of clients mapped to the therapist.
+      parameters:
+        - name: therapistId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: List of clients retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    clientId:
+                      type: string
+                    name:
+                      type: string
+                    email:
+                      type: string
+        404:
+          description: Therapist not found
+
+  /sessions:
+    post:
+      summary: Schedule a therapy session
+      description: Allows a client to schedule a session with a mapped therapist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clientId
+                - therapistId
+                - dateTime
+              properties:
+                clientId:
+                  type: string
+                therapistId:
+                  type: string
+                dateTime:
+                  type: string
+                  format: date-time
+      responses:
+        201:
+          description: Session scheduled successfully
+        400:
+          description: Invalid input
+        404:
+          description: Client or therapist not found
+
+  /messages:
+    post:
+      summary: Send a message
+      description: Allows a client or therapist to send a message to the other party.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - senderId
+                - receiverId
+                - message
+              properties:
+                senderId:
+                  type: string
+                receiverId:
+                  type: string
+                message:
+                  type: string
+      responses:
+        201:
+          description: Message sent successfully
+        404:
+          description: Sender or receiver not found
+
+  /search:
+    get:
+      summary: Search across journals and notes
+      description: Allows therapists or clients to perform a keyword search across journals and notes.
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Search results retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                      enum: [journal, note]
+                    content:
+                      type: string
+        400:
+          description: Invalid query
