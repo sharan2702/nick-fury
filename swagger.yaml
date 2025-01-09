@@ -1,284 +1,154 @@
 openapi: 3.0.0
 info:
-  title: Therapy App API
-  description: API for managing therapy sessions, clients, therapists, and journals.
+  title: Therapy Management API
   version: 1.0.0
+  description: API for managing clients, therapists, journals, and access requests.
 
 servers:
-  - url: https://api.therapyapp.com/v1
-    description: Production server
+  - url: http://localhost:5000
+    description: Local development server
 
 paths:
-  /clients/register:
+  /auth/register:
     post:
-      summary: Register a new client
-      description: Creates a new client account.
+      summary: Register a new user
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - name
-                - email
-                - password
               properties:
-                name:
-                  type: string
                 email:
                   type: string
-                  format: email
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [client, therapist]
+      responses:
+        201:
+          description: User registered successfully
+        400:
+          description: Invalid request
+
+  /auth/login:
+    post:
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
                 password:
                   type: string
       responses:
-        201:
-          description: Client created successfully
-        400:
-          description: Invalid input
-        409:
-          description: Email already exists
+        200:
+          description: Login successful
+        401:
+          description: Invalid credentials
 
-  /therapists/register:
+  /journals:
     post:
-      summary: Register a new therapist
-      description: Creates a new therapist account.
+      summary: Create a new journal
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - name
-                - email
-                - password
               properties:
-                name:
+                content:
                   type: string
-                email:
-                  type: string
-                  format: email
-                password:
-                  type: string
-                specialization:
-                  type: string
-                  description: Area of expertise of the therapist
       responses:
         201:
-          description: Therapist created successfully
-        400:
-          description: Invalid input
-        409:
-          description: Email already exists
+          description: Journal created
+        401:
+          description: Unauthorized
 
-  /clients/{clientId}/journals:
-    post:
-      summary: Add a journal entry
-      description: Adds an emotion entry to the client's journal.
+  /journals/{journalId}/revoke-access:
+    put:
+      summary: Revoke access to a journal
       parameters:
-        - name: clientId
+        - name: journalId
           in: path
           required: true
           schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - emotion
-                - intensity
-                - timestamp
-              properties:
-                emotion:
-                  type: string
-                intensity:
-                  type: integer
-                  minimum: 1
-                  maximum: 10
-                timestamp:
-                  type: string
-                  format: date-time
-      responses:
-        201:
-          description: Journal entry added successfully
-        400:
-          description: Invalid input
-        404:
-          description: Client not found
-
-  /clients/{clientId}/therapists:
-    get:
-      summary: Get mapped therapists
-      description: Retrieves a list of therapists mapped to the client.
-      parameters:
-        - name: clientId
-          in: path
-          required: true
-          schema:
-            type: string
+            type: integer
+      security:
+        - bearerAuth: []
       responses:
         200:
-          description: List of therapists retrieved
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    therapistId:
-                      type: string
-                    name:
-                      type: string
-                    email:
-                      type: string
+          description: Access revoked
+        401:
+          description: Unauthorized
         404:
-          description: Client not found
+          description: Journal not found
 
+  /access-requests/{requestId}/approve:
     post:
-      summary: Map a therapist to the client
-      description: Maps a therapist to the client account for therapy sessions.
+      summary: Approve an access request
       parameters:
-        - name: clientId
+        - name: requestId
           in: path
           required: true
           schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - therapistId
-              properties:
-                therapistId:
-                  type: string
+            type: integer
+      security:
+        - bearerAuth: []
       responses:
-        201:
-          description: Therapist mapped successfully
+        200:
+          description: Request approved
+        403:
+          description: Unauthorized
         404:
-          description: Client or therapist not found
-        409:
-          description: Therapist already mapped to client
+          description: Request not found
 
-  /therapists/{therapistId}/clients:
-    get:
-      summary: Get mapped clients
-      description: Retrieves a list of clients mapped to the therapist.
+  /access-requests/{requestId}/reject:
+    post:
+      summary: Reject an access request
       parameters:
-        - name: therapistId
+        - name: requestId
           in: path
           required: true
           schema:
-            type: string
+            type: integer
+      security:
+        - bearerAuth: []
       responses:
         200:
-          description: List of clients retrieved
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    clientId:
-                      type: string
-                    name:
-                      type: string
-                    email:
-                      type: string
+          description: Request rejected
+        403:
+          description: Unauthorized
         404:
-          description: Therapist not found
+          description: Request not found
 
-  /sessions:
-    post:
-      summary: Schedule a therapy session
-      description: Allows a client to schedule a session with a mapped therapist.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - clientId
-                - therapistId
-                - dateTime
-              properties:
-                clientId:
-                  type: string
-                therapistId:
-                  type: string
-                dateTime:
-                  type: string
-                  format: date-time
-      responses:
-        201:
-          description: Session scheduled successfully
-        400:
-          description: Invalid input
-        404:
-          description: Client or therapist not found
-
-  /messages:
-    post:
-      summary: Send a message
-      description: Allows a client or therapist to send a message to the other party.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - senderId
-                - receiverId
-                - message
-              properties:
-                senderId:
-                  type: string
-                receiverId:
-                  type: string
-                message:
-                  type: string
-      responses:
-        201:
-          description: Message sent successfully
-        404:
-          description: Sender or receiver not found
-
-  /search:
-    get:
-      summary: Search across journals and notes
-      description: Allows therapists or clients to perform a keyword search across journals and notes.
+  /therapist-mappings/{mappingId}:
+    delete:
+      summary: Remove therapist-client mapping
       parameters:
-        - name: query
-          in: query
+        - name: mappingId
+          in: path
           required: true
           schema:
-            type: string
+            type: integer
+      security:
+        - bearerAuth: []
       responses:
         200:
-          description: Search results retrieved
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    type:
-                      type: string
-                      enum: [journal, note]
-                    content:
-                      type: string
-        400:
-          description: Invalid query
+          description: Mapping deleted
+        404:
+          description: Mapping not found or unauthorized
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
